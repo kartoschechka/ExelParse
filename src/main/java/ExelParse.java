@@ -9,14 +9,17 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
 public class ExelParse {
 
     private String exelFile;
-    Statement statement;
-    Connection connection;
+    private Statement statement;
+    private Connection connection;
+    private SimpleDateFormat sdf= new SimpleDateFormat("yyyy.MM.dd");
 
     public ExelParse(String exelFile) {
         this.exelFile = exelFile;
@@ -53,9 +56,17 @@ public class ExelParse {
     }
 
     private void parseSheet(Sheet sheet) {
-        List<String> groupName;
         int indexStarting = findIndexOfMondey(sheet);
-        System.out.println(sheet.getRow(9).getCell(1).getNumericCellValue());
+        List<String> groupName=new ArrayList<String>();
+        Row rowWichName =sheet.getRow(indexStarting-1);
+        for (int i =1; i <rowWichName.getLastCellNum() ; i++) {
+            groupName.add(rowWichName.getCell(i).getStringCellValue());
+        }
+        for (String x:groupName ) {
+            System.out.println(x);
+        }
+        //String str = (sdf.format(sheet.getRow(9).getCell(1).getDateCellValue()));
+
     }
 
     private int findIndexOfMondey(Sheet sheet) {
@@ -64,6 +75,7 @@ public class ExelParse {
         int lastIndex = sheet.getLastRowNum();
         for (int i = 0; i < lastIndex; i++) {
             Row row = sheet.getRow(i);
+            if (row == null) continue;
             Cell cell = row.getCell(0);
             if (cell == null || cell.getCellTypeEnum() != CellType.STRING) {
                 continue;
