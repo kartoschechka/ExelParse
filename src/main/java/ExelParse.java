@@ -3,6 +3,7 @@ import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.util.CellRangeAddress;
 
 import java.sql.*;
 import java.io.File;
@@ -19,7 +20,7 @@ public class ExelParse {
     private String exelFile;
     private Statement statement;
     private Connection connection;
-    private SimpleDateFormat sdf= new SimpleDateFormat("yyyy.MM.dd");
+
 
     public ExelParse(String exelFile) {
         this.exelFile = exelFile;
@@ -34,8 +35,6 @@ public class ExelParse {
             while (name.hasNext()) {
                 parseSheet(name.next());
             }
-
-
         } catch (SQLException ex) {
             System.out.println("Что то пошло не так с БД");
             return;
@@ -56,16 +55,33 @@ public class ExelParse {
     }
 
     private void parseSheet(Sheet sheet) {
+        List<CellRangeAddress> mergeRegion = sheet.getMergedRegions();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd");
+        String daysOfWeek = "ПОНЕДЕЛЬНИК ВТОРНИК СРЕДА ЧЕТВЕРГ ПЯТНИЦА СУББОТА";
         int indexStarting = findIndexOfMondey(sheet);
-        List<String> groupName=new ArrayList<String>();
-        Row rowWichName =sheet.getRow(indexStarting-1);
-        for (int i =1; i <rowWichName.getLastCellNum() ; i++) {
-            groupName.add(rowWichName.getCell(i).getStringCellValue());
+        List<String> groupName = getGroupName(sheet.getRow(indexStarting - 1));
+        int numberOfPair = 1;
+        String date = "";
+        for (int i = indexStarting; i + 1 < sheet.getLastRowNum(); i++) {
+            if (sheet.getRow(i).getCell(0) == null || sheet.getRow(i).getCell(0).getStringCellValue().equals("")) {
+                return;
+            }
+            if (daysOfWeek.contains(sheet.getRow(i).getCell(0).getStringCellValue())) {
+                date = sdf.format(sheet.getRow(i).getCell(1).getDateCellValue());
+                numberOfPair = 1;
+                System.out.println(date);
+                continue;
+            }
+            parseRow(sheet.getRow(i), numberOfPair, date, mergeRegion, groupName);
+            numberOfPair++;
+
+
         }
-        for (String x:groupName ) {
-            System.out.println(x);
-        }
-        //String str = (sdf.format(sheet.getRow(9).getCell(1).getDateCellValue()));
+
+
+    }
+
+    private void parseRow(Row row, int numberOfPair, String date, List<CellRangeAddress> mergeRegion, List<String> groupName) {
 
     }
 
@@ -85,6 +101,14 @@ public class ExelParse {
             }
         }
         return index;
+    }
+
+    private ArrayList<String> getGroupName(Row row) {
+        ArrayList<String> list = new ArrayList<String>();
+        for (int i = 1; i < row.getLastCellNum(); i++) {
+            list.add(row.getCell(i).getStringCellValue());
+        }
+        return list;
     }
 }
 
