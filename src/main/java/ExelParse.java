@@ -62,7 +62,7 @@ public class ExelParse {
         List<String> groupName = getGroupName(sheet.getRow(indexStarting - 1));
         int numberOfPair = 1;
         String date = "";
-        for (int i = indexStarting; i + 1 < sheet.getLastRowNum(); i++) {
+        for (int i = indexStarting; i < sheet.getLastRowNum(); i++) {
             if (sheet.getRow(i).getCell(0) == null || sheet.getRow(i).getCell(0).getStringCellValue().equals("")) {
                 return;
             }
@@ -74,15 +74,45 @@ public class ExelParse {
             }
             parseRow(sheet.getRow(i), numberOfPair, date, mergeRegion, groupName);
             numberOfPair++;
-
-
         }
-
-
     }
 
     private void parseRow(Row row, int numberOfPair, String date, List<CellRangeAddress> mergeRegion, List<String> groupName) {
+        String cellValue = "";
+        for (int i = 1; i < groupName.size(); i++) {
+            if (groupName.get(i - 1).equals("")) {
+                continue;
+            }
+            if (row.getCell(i) == null) {
+                cellValue = "";
+                parseCell(cellValue);
+                continue;
+            }
+            if (row.getCell(i).getStringCellValue().equals("")) {
+                cellValue = getMergeCellValue(row, row.getCell(i), mergeRegion);
+                parseCell(cellValue);
+            } else {
+                cellValue = row.getCell(i).getStringCellValue();
+                parseCell(cellValue);
+            }
+        }
+    }
 
+    private void parseCell(String cellValue){
+        String[] strings =cellValue.split("\n");
+
+    }
+
+    private String getMergeCellValue(Row row, Cell cell, List<CellRangeAddress> mergeRegion) {
+        String value = "";
+        for (int i = 0; i < mergeRegion.size(); i++) {
+            if (cell.getRowIndex() == mergeRegion.get(i).getFirstRow()) {
+                if (cell.getColumnIndex() <= mergeRegion.get(i).getLastColumn() && cell.getColumnIndex() >= mergeRegion.get(i).getFirstColumn()) {
+                    return row.getCell(mergeRegion.get(i).getFirstColumn()).getStringCellValue();
+                }
+            } else continue;
+        }
+        return value;
     }
 
     private int findIndexOfMondey(Sheet sheet) {
