@@ -5,6 +5,7 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.util.CellRangeAddress;
 
+import java.io.UnsupportedEncodingException;
 import java.sql.*;
 import java.io.File;
 import java.io.FileInputStream;
@@ -32,6 +33,7 @@ public class ExelParse {
     public void parse() throws IOException, ClassNotFoundException, SQLException {
         try {
             connection = Database.getConnection ();
+            statement = connection.createStatement ();
             HSSFWorkbook gh = new HSSFWorkbook (new FileInputStream (new File (exelFile)));
             Iterator<Sheet> name = gh.iterator ();
             while (name.hasNext ()) {
@@ -39,7 +41,7 @@ public class ExelParse {
             }
 
         } catch (SQLException ex) {
-            System.out.println ("Что то пошло не так с БД");
+            System.out.println (ex.getMessage ());
             return;
         } finally {
             System.out.println ("disconnect");
@@ -57,7 +59,7 @@ public class ExelParse {
         }
     }
 
-    private void parseSheet(Sheet sheet) {
+    private void parseSheet(Sheet sheet) throws SQLException, UnsupportedEncodingException {
         List<CellRangeAddress> mergeRegion = sheet.getMergedRegions ();
         SimpleDateFormat sdf = new SimpleDateFormat ("yyyy.MM.dd");
         String daysOfWeek = "ПОНЕДЕЛЬНИК ВТОРНИК СРЕДА ЧЕТВЕРГ ПЯТНИЦА СУББОТА";
@@ -70,7 +72,7 @@ public class ExelParse {
                 return;
             }
             if (daysOfWeek.contains (sheet.getRow (i).getCell (0).getStringCellValue ())) {
-                date = sdf.format (sheet.getRow (i).getCell (1).getDateCellValue ());
+                date = "'" + sdf.format (sheet.getRow (i).getCell (1).getDateCellValue ()) + "'";
                 numberOfPair = 1;
                 System.out.println (date);
                 continue;
@@ -80,7 +82,7 @@ public class ExelParse {
         }
     }
 
-    private void parseRow(Row row, int numberOfPair, String date, List<CellRangeAddress> mergeRegion, List<String> groupName) {
+    private void parseRow(Row row, int numberOfPair, String date, List<CellRangeAddress> mergeRegion, List<String> groupName) throws SQLException, UnsupportedEncodingException {
         String cellValue = "";
         for (int i = 1; i < groupName.size (); i++) {
             if (groupName.get (i - 1).equals ("")) {
@@ -101,18 +103,18 @@ public class ExelParse {
         }
     }
 
-    private void parseCell(Info info, String cellValue) {
+    private void parseCell(Info info, String cellValue) throws SQLException, UnsupportedEncodingException {
         Pattern patternOfFIO = Pattern.compile ("([А-Я]+[\\s][А-Я]\\.[А-Я]\\.)");
         Pattern patternOfAudience = Pattern.compile ("[0-9]{3}[а-я]?(\\D+№[0-9])?");
         Pattern patternOfSubgroup = Pattern.compile ("[\\(][0-9][\\)]");
         Pattern patternOfType = Pattern.compile ("[\\(][А-Яа-я]+[\\)]");
         String[] strings = cellValue.split ("\n");
         if (cellValue.equals ("") || (cellValue.length () < 4 && cellValue.contains ("\n"))) {
-            info.addDiscipline ("");
+            info.addDiscipline ("NULL");
             info.addNumberSubgroup (0);
-            info.addType ("");
-            info.addAudience ("");
-            info.addTeacher ("");
+            info.addType ("NULL");
+            info.addAudience ("NULL");
+            info.addTeacher ("NULL");
             sendResponse (info);
             return;
         }
@@ -124,14 +126,14 @@ public class ExelParse {
                 Matcher prepod = patternOfFIO.matcher (strings[1]);
                 if (prepod.find ()) {
                     info.addTeacher (strings[1].substring (prepod.start (), prepod.end ()));
-                } else info.addTeacher ("");
+                } else info.addTeacher ("NULL");
                 if (audience.find ()) {
                     info.addAudience (strings[1].substring (audience.start (), audience.end ()));
                     info.addType ("лк.");
                 }
                 sendResponse (info);
             } else {
-                info.addAudience ("");
+                info.addAudience ("NULL");
                 info.addType ("пр.");
                 sendResponse (info);
             }
@@ -166,48 +168,80 @@ public class ExelParse {
             Matcher aud = patternOfAudience.matcher (cellValue);
             if (aud.find ()) {
                 info.addAudience (cellValue.substring (aud.start (), aud.end ()));
-            } else info.addAudience ("");
+            } else info.addAudience ("NULL");
+
             if (prepod.find ()) {
                 info.addTeacher (cellValue.substring (prepod.start (), prepod.end ()));
-            } else info.addTeacher ("");
+            } else info.addTeacher ("NULL");
+
             if (type.find ()) {
                 info.addType (cellValue.substring (type.start (), type.end ()).replaceAll ("[()]", ""));
             } else info.addType ("лк.");
+
             info.addDiscipline (strings[0].replaceAll ("[(][А-Яа-я]+[)]", ""));
             sendResponse (info);
             return;
         } else {
             for (int i = 0; i < strings.length; i++) {
-                Matcher matcherOfSubgroup = patternOfSubgroup.matcher (strings[i]);
-                if (matcherOfSubgroup.find ()) {
-                    Matcher type = patternOfType.matcher (strings[i]);
-                    Matcher prepod = patternOfFIO.matcher (strings[i]);
-                    Matcher aud = patternOfAudience.matcher (strings[i]);
-                    info.addNumberSubgroup (Integer.parseInt (strings[i].substring (matcherOfSubgroup.start (), matcherOfSubgroup.end ()).replaceAll ("[()]", "")));
-                    if (aud.find ()) {
-                        info.addAudience (strings[i].substring (aud.start (), aud.end ()));
-                    } else info.addAudience ("");
-                    if (prepod.find ()) {
-                        info.addTeacher (strings[i].substring (prepod.start (), prepod.end ()));
-                    } else info.addTeacher ("");
-                    if (type.find ()) {
-                        info.addType (strings[i].substring (type.start (), type.end ()).replaceAll ("[()]", ""));
-                    } else info.addType ("пр.");
-                    strings[i] = strings[i].replaceAll ("[\\(][0-9][\\)]", "").replaceAll ("[а-я]{1,4}\\.([а-я]{1,4}\\.)?", "");
-                    sendResponse (info);
-                    return;
-
-                }
-
+                parseStringWithSubgroup (strings[i], info);
             }
-
+            sendResponse (info);
+            return;
         }
-
-
     }
 
-    private void sendResponse(Info info) {
-        System.out.println (info.toString ());
+    private void parseStringWithSubgroup(String stringValue, Info info) {
+        String audience = "";
+        String teacher = "";
+        int numberSubgr = 0;
+        String type = "";
+        String discipline = "";
+
+        Pattern patternOfFIO = Pattern.compile ("([А-Я]+[\\s][А-Я]\\.[А-Я]\\.)");
+        Pattern patternOfAudience = Pattern.compile ("[0-9]{3}[а-я]?(\\D+№[0-9])?");
+        Pattern patternOfSubgroup = Pattern.compile ("[\\(][0-9][\\)]");
+        Pattern patternOfType = Pattern.compile ("[\\(][А-Яа-я]+[\\)]");
+
+
+        Matcher matcherOfSubgroup = patternOfSubgroup.matcher (stringValue);
+        if (matcherOfSubgroup.find ()) {
+            Matcher typeMatcher = patternOfType.matcher (stringValue);
+            Matcher teacherMatcher = patternOfFIO.matcher (stringValue);
+            Matcher audienceMatcher = patternOfAudience.matcher (stringValue);
+            numberSubgr = Integer.parseInt (stringValue.substring (matcherOfSubgroup.start (), matcherOfSubgroup.end ()).replaceAll ("[()]", ""));
+            info.addNumberSubgroup (numberSubgr);
+
+            if (audienceMatcher.find ()) {
+                audience =stringValue.substring (audienceMatcher.start (), audienceMatcher.end ());
+                info.addAudience (audience);
+            } else info.addAudience ("NULL");
+            if (teacherMatcher.find ()) {
+                teacher =stringValue.substring (teacherMatcher.start (), teacherMatcher.end ());
+                info.addTeacher (teacher);
+            } else info.addTeacher ("NULL");
+            if (typeMatcher.find ()) {
+                type =stringValue.substring (typeMatcher.start (), typeMatcher.end ()).replaceAll ("[()]", "");
+                info.addType (type);
+            } else info.addType ("пр.");
+
+            discipline =stringValue.replaceAll (audience, "").replaceAll (teacher, "").
+                    replaceAll ("[\\(][А-Яа-я]+[\\)]", "").
+                    replaceAll ("[\\(][0-9][\\)]", "").replaceAll ("[а-я]{1,4}\\.([а-я]{1,4}\\.)?", "");
+
+            info.addDiscipline (discipline.trim ());
+        }
+    }
+
+    private void sendResponse(Info info) throws SQLException, UnsupportedEncodingException {
+        for (int i = 0; i < info.getNumberSubgroup ().size (); i++) {
+            String query = "INSERT INTO `shedule` (`id_shedule`, `date`, `groups`, `numberOfPair`, `numberSubgroup`, `type`, `discipline`, `teacher`, `audience`) "
+                    + "VALUES (NULL, " + info.getDate () + "," + info.getGroup () + "," + info.getNumberOfPair () +","
+                    + info.getNumberSubgroup ().get (i)+ "," + info.getType(i) + ","
+                    + info.getDiscipline(i) + "," + info.getTeacher (i) + "," + info.getAudience (i) + ");";
+            String qddqqdqd= new String (query.getBytes (),"UTF-8");
+            System.out.println (query);
+            statement.executeUpdate (query);
+        }
     }
 
     private String getMergeCellValue(Row row, Cell cell, List<CellRangeAddress> mergeRegion) {
@@ -243,7 +277,7 @@ public class ExelParse {
     private ArrayList<String> getGroupName(Row row) {
         ArrayList<String> list = new ArrayList<String> ();
         for (int i = 1; i < row.getLastCellNum (); i++) {
-            list.add (row.getCell (i).getStringCellValue ());
+            list.add ("'" + row.getCell (i).getStringCellValue () + "'");
         }
         return list;
     }

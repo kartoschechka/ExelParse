@@ -25,6 +25,7 @@ public final class Database {
                 System.out.println("то то пошло не так с БД");
                 ex.printStackTrace();
             }
+
         }
         return connection;
     }

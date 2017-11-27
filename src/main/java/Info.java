@@ -7,6 +7,63 @@ public class Info {
     private int numberOfPair;
     private List<Integer> numberSubgroup;
 
+//    public String getDate() {
+//        return date;
+//    }
+
+//    public String getGroup() {
+//        return group;
+//    }
+
+//    public int getNumberOfPair() {
+//        return numberOfPair;
+//    }
+
+//    public Integer getNumberSubgroup(int i) {
+//        return numberSubgroup.get(i);
+//    }
+
+    public void addNumberSubgroup(int i) {
+        this.numberSubgroup.add(i);
+    }
+
+//    public String getType(int i) {
+//        return type.get(i);
+//    }
+
+    public void addType(String type) {
+        this.type.add(type);
+    }
+
+//    public String getDiscipline(int i) {
+//        return discipline.get(i);
+//    }
+
+    public void addDiscipline(String discipline) {
+        this.discipline.add(discipline);
+    }
+
+//    public String getTeacher(int i) {
+//        return teacher.get(i);
+//    }
+
+    public void addTeacher(String teacher) {
+        this.teacher.add(teacher);
+    }
+
+//    public String getAudience(int i) {
+//        return audience.get(i);
+//    }
+
+    public void addAudience(String audience) {
+        this.audience.add(audience);
+    }
+
+    private List<String> type;
+    private List<String> discipline;
+    private List<String> teacher;
+    private List<String> audience;
+
     public String getDate() {
         return date;
     }
@@ -19,50 +76,33 @@ public class Info {
         return numberOfPair;
     }
 
-    public Integer getNumberSubgroup(int i) {
-        return numberSubgroup.get(i);
-    }
-
-    public void addNumberSubgroup(int i) {
-        this.numberSubgroup.add(i);
+    public List<Integer> getNumberSubgroup() {
+        return numberSubgroup;
     }
 
     public String getType(int i) {
-        return type.get(i);
-    }
-
-    public void addType(String type) {
-        this.type.add(type);
+        if (type.get (i).equals ("NULL")){
+            return "NULL";
+        } else  return "'" + type.get (i)+"'";
     }
 
     public String getDiscipline(int i) {
-        return discipline.get(i);
-    }
-
-    public void addDiscipline(String discipline) {
-        this.discipline.add(discipline);
+        if (discipline.get (i).equals ("NULL")){
+            return "NULL";
+        } else  return "'" + discipline.get (i)+"'";
     }
 
     public String getTeacher(int i) {
-        return teacher.get(i);
-    }
-
-    public void addTeacher(String teacher) {
-        this.teacher.add(teacher);
+        if (teacher.get (i).equals ("NULL")){
+            return "NULL";
+        } else  return "'" + teacher.get (i)+"'";
     }
 
     public String getAudience(int i) {
-        return audience.get(i);
+        if (audience.get (i).equals ("NULL")){
+            return "NULL";
+        } else  return "'" + audience.get (i)+"'";
     }
-
-    public void addAudience(String audience) {
-        this.audience.add(audience);
-    }
-
-    private List<String> type;
-    private List<String> discipline;
-    private List<String> teacher;
-    private List<String> audience;
 
     public Info(String date, String group, int numberOfPair) {
         this.date = date;
