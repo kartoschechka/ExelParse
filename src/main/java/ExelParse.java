@@ -37,6 +37,7 @@ public class ExelParse {
             while (name.hasNext ()) {
                 parseSheet (name.next ());
             }
+
         } catch (SQLException ex) {
             System.out.println ("Что то пошло не так с БД");
             return;
@@ -87,15 +88,15 @@ public class ExelParse {
             }
             if (row.getCell (i) == null) {
                 cellValue = "";
-                parseCell (new Info (date, groupName.get (i), numberOfPair), cellValue);
+                parseCell (new Info (date, groupName.get (i - 1), numberOfPair), cellValue);
                 continue;
             }
             if (row.getCell (i).getStringCellValue ().equals ("")) {
                 cellValue = getMergeCellValue (row, row.getCell (i), mergeRegion);
-                parseCell (new Info (date, groupName.get (i), numberOfPair), cellValue);
+                parseCell (new Info (date, groupName.get (i - 1), numberOfPair), cellValue);
             } else {
                 cellValue = row.getCell (i).getStringCellValue ();
-                parseCell (new Info (date, groupName.get (i), numberOfPair), cellValue);
+                parseCell (new Info (date, groupName.get (i - 1), numberOfPair), cellValue);
             }
         }
     }
@@ -106,7 +107,7 @@ public class ExelParse {
         Pattern patternOfSubgroup = Pattern.compile ("[\\(][0-9][\\)]");
         Pattern patternOfType = Pattern.compile ("[\\(][А-Яа-я]+[\\)]");
         String[] strings = cellValue.split ("\n");
-        if (cellValue.equals ("")) {
+        if (cellValue.equals ("") || (cellValue.length () < 4 && cellValue.contains ("\n"))) {
             info.addDiscipline ("");
             info.addNumberSubgroup (0);
             info.addType ("");
@@ -141,7 +142,8 @@ public class ExelParse {
             info.addType ("пр.");
 
             Matcher matcherS = patternOfSubgroup.matcher (cellValue);
-            if (matcherS.matches ()) {
+            if (matcherS.find ()) {
+                info.addNumberSubgroup (Integer.parseInt (cellValue.substring (matcherS.start (), matcherS.end ()).replaceAll ("[()]", "")));
                 while (matcherS.find ()) {
                     info.addNumberSubgroup (Integer.parseInt (cellValue.substring (matcherS.start (), matcherS.end ()).replaceAll ("[()]", "")));
                 }
@@ -172,13 +174,40 @@ public class ExelParse {
                 info.addType (cellValue.substring (type.start (), type.end ()).replaceAll ("[()]", ""));
             } else info.addType ("лк.");
             info.addDiscipline (strings[0].replaceAll ("[(][А-Яа-я]+[)]", ""));
+            sendResponse (info);
+            return;
+        } else {
+            for (int i = 0; i < strings.length; i++) {
+                Matcher matcherOfSubgroup = patternOfSubgroup.matcher (strings[i]);
+                if (matcherOfSubgroup.find ()) {
+                    Matcher type = patternOfType.matcher (strings[i]);
+                    Matcher prepod = patternOfFIO.matcher (strings[i]);
+                    Matcher aud = patternOfAudience.matcher (strings[i]);
+                    info.addNumberSubgroup (Integer.parseInt (strings[i].substring (matcherOfSubgroup.start (), matcherOfSubgroup.end ()).replaceAll ("[()]", "")));
+                    if (aud.find ()) {
+                        info.addAudience (strings[i].substring (aud.start (), aud.end ()));
+                    } else info.addAudience ("");
+                    if (prepod.find ()) {
+                        info.addTeacher (strings[i].substring (prepod.start (), prepod.end ()));
+                    } else info.addTeacher ("");
+                    if (type.find ()) {
+                        info.addType (strings[i].substring (type.start (), type.end ()).replaceAll ("[()]", ""));
+                    } else info.addType ("пр.");
+                    strings[i] = strings[i].replaceAll ("[\\(][0-9][\\)]", "").replaceAll ("[а-я]{1,4}\\.([а-я]{1,4}\\.)?", "");
+                    sendResponse (info);
+                    return;
+
+                }
+
+            }
 
         }
+
 
     }
 
     private void sendResponse(Info info) {
-
+        System.out.println (info.toString ());
     }
 
     private String getMergeCellValue(Row row, Cell cell, List<CellRangeAddress> mergeRegion) {

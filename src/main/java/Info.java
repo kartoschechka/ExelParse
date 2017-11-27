@@ -74,4 +74,18 @@ public class Info {
         teacher = new ArrayList<String>();
         audience = new ArrayList<String>();
     }
+
+    @Override
+    public String toString() {
+        return "Info{" +
+                "date='" + date + '\'' +
+                ", group='" + group + '\'' +
+                ", numberOfPair=" + numberOfPair +
+                ", numberSubgroup=" + numberSubgroup +
+                ", type=" + type +
+                ", discipline=" + discipline +
+                ", teacher=" + teacher +
+                ", audience=" + audience +
+                '}';
+    }
 }
