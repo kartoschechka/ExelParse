@@ -3,7 +3,7 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 
 public final class Database {
-    private static final String URL = "jdbc:mysql://localhost:3306/schedules?autoReconnect=true&useSSL=false";
+    private static final String URL = "jdbc:mysql://localhost:3306/schedule?useUnicode=true&characterEncoding=UTF8";
     private static final String USER = "root";
     private static final String PASSWORD = "verbessern";
     private static Connection connection;
